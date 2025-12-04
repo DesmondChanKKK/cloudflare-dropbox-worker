@@ -1,0 +1,29 @@
+name = "cloudflare-dropbox-worker"
+main = "src/index.js"
+compatibility_date = "2023-10-25"
+
+[vars]
+# Option 1: Static Access Token (Short-lived)
+DROPBOX_ACCESS_TOKEN = "***"
+# Option 2: Refresh Token (Long-lived)
+# If these are set, they will take priority over DROPBOX_ACCESS_TOKEN
+DROPBOX_REFRESH_TOKEN = "***"
+DROPBOX_APP_KEY = "***"
+DROPBOX_APP_SECRET = "***"
+
+# Extraction Configuration (JSON String)
+# Define rules: key (output field name), keywords (list of words to match in first column), colIndex (0-based column index to take value from)
+EXTRACTION_CONFIG = '''
+{
+  "default": [
+    {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 3},
+    {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 3},
+    {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 3},
+    {"key": "discount", "keywords": ["连锁品牌", "老客户"], "colIndex": 3},
+    {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 3}
+  ],
+  "example_type": [
+    {"key": "example_key", "keywords": ["example"], "colIndex": 1}
+  ]
+}
+'''
