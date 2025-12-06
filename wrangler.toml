@@ -3,13 +3,16 @@ main = "src/index.js"
 compatibility_date = "2023-10-25"
 
 [vars]
+# Debug Flag (Set to "false" to disable debug logs)
+IS_DEBUG = "false"
+
 # Option 1: Static Access Token (Short-lived)
-DROPBOX_ACCESS_TOKEN = "***"
+ DROPBOX_ACCESS_TOKEN = ""
 # Option 2: Refresh Token (Long-lived)
 # If these are set, they will take priority over DROPBOX_ACCESS_TOKEN
-DROPBOX_REFRESH_TOKEN = "***"
-DROPBOX_APP_KEY = "***"
-DROPBOX_APP_SECRET = "***"
+ DROPBOX_REFRESH_TOKEN = ""
+ DROPBOX_APP_KEY = ""
+ DROPBOX_APP_SECRET = ""
 
 # Extraction Configuration (JSON String)
 # Define rules: key (output field name), keywords (list of words to match in first column), colIndex (0-based column index to take value from)
