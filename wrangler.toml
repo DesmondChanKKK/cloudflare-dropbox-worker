@@ -7,23 +7,34 @@ compatibility_date = "2023-10-25"
 IS_DEBUG = "false"
 
 # Option 1: Static Access Token (Short-lived)
- DROPBOX_ACCESS_TOKEN = ""
+ DROPBOX_ACCESS_TOKEN = "sl.u.AGISCOgMevnMKYCBgCyv7Yz_qdZ0X5O2rHxuCrEpShDPE-82Fj5JJbJM6sWB-dNkzDqHU0oo5jn2FqdcPuZ7WSMTuqtZU2apOjJ5cUBEhYiYROvv5pC--K6rq0eyLp22GI4k2qMA1KxDIITu84oS2CqAwyNcvXM51s8Vo6Yj7lYsZn-PxlWKvFobnR3JkDUHNm7tQqs-M4Wz6Zd_dCbnPdIJC7HB5oZggVpB7auW289QBT44fU_YR0Q8KWN5S0WwijrDjZEjDZoVno7MqJfC8TvrQW9PE6FzEN4WlqvxkIZ71XvVNUqoysXftyDjE0AzhueNVvhXmz7fMr8vJvIfCvnCXNNViM4I9uI60aW2nD9WaDUoGV6DWs27Yw89TC4UEQV4uORMp69o5yEE_xwPChUi2ohr3Q8-Q-oW7BLO-CTeZACcvgssq8RXCHBbMYR7LySh_71dTq_GzqLGusr13SrrE2Cs_Ud0O-zfTvFauqmwYy5f-7QVMSo-OI3wsUN7PeTWmreK-jSXA1j458UjD1Y1vUtvwLY2hoFUnHdHY2cEKtg7wtfFwj9Pv6FOFFURxZWzdk9tk8v_C4DRNTWhsyEFhiD7N3RJmqmz-iUkKCfO5VwW082ViQLJLqmvTOmCxbbSuE709zTZH7pv8aQ95G7KDcnboMoHSV1G_YObdsrMq03gqE0_3ri8Zs5OkoFuLRVWa642d8-BQZkVWxWQSXVHHFk0S-vZxVQu-QangWyzy7ikZuuIU_HXhCL8gCtpCewMzFHXcbF2x8FD1tpenBJmpvXrlHoJmV80QhnNn7EH2FkynqavsinT8Kc62Uu4783pT1KL19oTp0lQTUr_BP0t6J5H1zuiZ-9Rq5-P_kisVm6XfIXxheUiLoCuil1Eus_4Zjek3O40Wll2P4DVxt-mC2JO-qh8_jmeQ1pm0tZCJNGrlt3p-6AvI8kzKXbGJxKt7MGfMrXAmDrQM4W7rXJ-9xGw9JBEpa8sOYmsBQC_sLAc4ZTecKouSv4RpJzXroTix3x740Vb7DBDO1702K27X4l0MumyyjuX4HPQ2R3MqHmHn36m1_btzgxgCb2be_-ZKfvv-XHI3kqCz493RuKy_QxUpKpOWRnF-ZOBBrpEV5j5bfJZvHo81kiPYGVCgO7E-d625O9yYVU_F6PxSGbdnQ6bx65qQnGnJNSbi3Qpwdg_Ce0MIG0Ih3rAJ0X4qhwFLZyg8--ldf-4m-7pfZs9cMUmUtGDM5d7eM2OI6jwgEg2h97ylIC5KOpvHfzFVpYe6Y8gzZe9g0dHkIO9ldbvGJu7C5Gxj_LrgFD2t55fhxv--kGzppRNx4dmqBFn3iI8_ECARGi2_Hq3oYgc5ydxe4p8UKUwe3H0Fo9zCT2dCQ"
 # Option 2: Refresh Token (Long-lived)
 # If these are set, they will take priority over DROPBOX_ACCESS_TOKEN
- DROPBOX_REFRESH_TOKEN = ""
- DROPBOX_APP_KEY = ""
- DROPBOX_APP_SECRET = ""
+ DROPBOX_REFRESH_TOKEN = "ui737arJcIcAAAAAAAAAASyJ_saew8VELdLYExiyV5QjpUN5lZifUUGqPAMRkrss"
+ DROPBOX_APP_KEY = "7t18hxy1q3fj3tv"
+ DROPBOX_APP_SECRET = "t1ghy0lv4sjnssj"
 
 # Extraction Configuration (JSON String)
 # Define rules: key (output field name), keywords (list of words to match in first column), colIndex (0-based column index to take value from)
 EXTRACTION_CONFIG = '''
 {
-  "default": [
-    {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 3},
-    {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 3},
-    {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 3},
-    {"key": "discount", "keywords": ["连锁品牌", "老客户"], "colIndex": 3},
-    {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 3}
+  "default": [ 
+    {"key": "first_total", "keywords": ["项目","定金"], "colIndex": 4},
+    {"key": "second_total", "keywords": ["项目","余款"], "colIndex": 4},
+    {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 4},
+    {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 4},
+    {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 4},
+    {"key": "discount", "keywords": ["连锁品牌", "老客户"], "colIndex": 4},
+    {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 4}
+  ],
+  "preventivo_sw_es": [ 
+    {"key": "first_total", "keywords": ["项目","定金"], "colIndex": 4},
+    {"key": "second_total", "keywords": ["项目","余款"], "colIndex": 4},
+    {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 4},
+    {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 4},
+    {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 4},
+    {"key": "discount", "keywords": ["连锁品牌", "老客户"], "colIndex": 4},
+    {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 4}
   ],
   "example_type": [
     {"key": "example_key", "keywords": ["example"], "colIndex": 1}

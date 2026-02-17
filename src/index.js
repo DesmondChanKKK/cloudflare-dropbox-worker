@@ -20,11 +20,23 @@ function createResponse(data, status = 200) {
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
-        const filename = url.searchParams.get('filename');
-        const folder = url.searchParams.get('folder') || ''; // Default to empty if not provided
-        const requestType = url.searchParams.get('type') || 'default';
-        const customConfigStr = url.searchParams.get('config');
-        const clientId = url.searchParams.get('clientid');
+        // Helper to sanitize input (remove newlines and trim)
+        // Also perform decodeURIComponent just in case some clients double-encode or don't decode automatically
+        const sanitize = (val) => {
+            if (!val) return '';
+            try {
+                val = decodeURIComponent(val);
+            } catch (e) {
+                // Ignore decoding errors
+            }
+            return val.replace(/[\r\n]+/g, '').trim();
+        };
+
+        const filename = sanitize(url.searchParams.get('filename'));
+        const folder = sanitize(url.searchParams.get('folder'));
+        const requestType = sanitize(url.searchParams.get('type')) || 'default';
+        const customConfigStr = sanitize(url.searchParams.get('config'));
+        const clientId = sanitize(url.searchParams.get('clientid'));
 
         // Determine Debug Mode
         // Check environment variable first, then fallback to default
@@ -55,8 +67,8 @@ export default {
         }
 
         if (clientId !== env.DROPBOX_APP_KEY) {
-            logger.error(`[Debug] Unauthorized: Invalid clientid.`);
-            return createResponse({ error: 'Unauthorized: Invalid clientid.' }, 401);
+            logger.error(`[Debug] Unauthorized: Expected ${env.DROPBOX_APP_KEY}, got ${clientId}`);
+            return createResponse({ error: `Unauthorized: Invalid clientid. Received: '${clientId}', Expected: '${env.DROPBOX_APP_KEY}'` }, 401);
         }
 
         if (!filename) {
@@ -185,9 +197,25 @@ export default {
                         }
 
                         // Find match (Case-Insensitive)
-                        const match = data.entries.find(entry => 
+                        // 1. Exact match (case-insensitive)
+                        let match = data.entries.find(entry => 
                             entry['.tag'] === 'file' && entry.name.toLowerCase() === lowerSearchFilename
-                        );
+                        ); // Corrected syntax
+
+                        // 2. Fuzzy match (ignore version suffix like (1), (2), etc.)
+                        if (!match) {
+                            // Helper to remove (1), (2) etc. from filename
+                            const cleanFilename = (name) => name.replace(/\s*\(\d+\)/g, '').toLowerCase();
+                            const cleanSearchName = cleanFilename(searchFilename);
+
+                            match = data.entries.find(entry => 
+                                entry['.tag'] === 'file' && cleanFilename(entry.name) === cleanSearchName
+                            );
+                            
+                            if (match) {
+                                logger.debug(`[Debug] Fuzzy match found: "${match.name}" for search "${searchFilename}"`);
+                            }
+                        }
 
                         if (match) {
                             return match.path_lower;
@@ -245,7 +273,7 @@ export default {
             const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
             // Handle 'raw' request type - return full data immediately
-            if (requestType === 'raw') {
+            if (requestType == 'raw') {
                 logger.debug('[Debug] Request type is "raw", returning full dataset.');
                 return createResponse({ data: rows });
             }
@@ -265,17 +293,22 @@ export default {
             // Load Config from Environment Variable if present
             if (env.EXTRACTION_CONFIG) {
                 try {
+                    logger.debug(`[Debug] Parsing EXTRACTION_CONFIG from environment...`);
                     const parsedConfig = JSON.parse(env.EXTRACTION_CONFIG);
                     if (Array.isArray(parsedConfig)) {
+                       logger.debug(`[Debug] Parsed config is Array. Overwriting 'default'.`);
                         // Support legacy array format by assigning it to 'default'
                         allConfigs["default"] = parsedConfig;
                     } else {
+                        logger.debug(`[Debug] Parsed config is Object. Merging keys: ${Object.keys(parsedConfig).join(', ')}`);
                         // Assume it's the new object format
                         allConfigs = { ...allConfigs, ...parsedConfig };
                     }
                 } catch (e) {
                     logger.error(`[Debug] Failed to parse EXTRACTION_CONFIG: ${e.message}`);
                 }
+            } else {
+                logger.warn('[Debug] EXTRACTION_CONFIG env var is missing or empty.');
             }
 
             // Determine Extraction Rules
@@ -334,6 +367,17 @@ export default {
                 }
             }
 
+            // Ensure extractionRules is an array
+            if (!Array.isArray(extractionRules)) {
+                logger.error(`[Debug] extractionRules is not an array (Type: ${typeof extractionRules}). Resetting to empty.`);
+                extractionRules = [];
+            }
+            
+            logger.debug(`[Debug] Extraction Config - Type: ${requestType}, Rules: ${extractionRules.length}`);
+            if (extractionRules.length > 0) {
+                logger.debug(`[Debug] First Rule: ${JSON.stringify(extractionRules[0])}`);
+            }
+
             // Helper function to clean and parse currency string
             const parseCurrency = (value) => {
                 if (typeof value === 'number') return value;
@@ -369,30 +413,44 @@ export default {
                 return extracted;
             };
 
-            // Perform Extraction
-            let extractedData = extractData(rows, extractionRules);
+            // Perform Extraction with Retry Logic (colIndex, colIndex+1, colIndex+2)
+            let extractedData = {};
+            let isFound = false;
 
-            // Optimization for 'custom' type: Retry with colIndex + 1 if all results are 0
-            if (requestType === 'custom') {
-                const allZeros = Object.values(extractedData).every(val => val === 0);
-                if (allZeros) {
-                    logger.debug('[Debug] Custom extraction yielded all zeros. Retrying with colIndex + 1...');
-                    const adjustedRules = extractionRules.map(rule => ({
-                        ...rule,
-                        colIndex: rule.colIndex + 1
-                    }));
-                    const retryData = extractData(rows, adjustedRules);
-                    
-                    // Check if retry yielded any non-zero results
-                    const retryHasValues = Object.values(retryData).some(val => val !== 0);
-                    if (retryHasValues) {
-                        logger.debug('[Debug] Retry successful. Using adjusted column indices.');
-                        extractedData = retryData;
-                    } else {
-                        logger.debug('[Debug] Retry also yielded all zeros. Reverting to original.');
-                    }
+            // Define max retries (base + 1 + 2)
+            const MAX_OFFSET = 2;
+
+            for (let offset = 0; offset <= MAX_OFFSET; offset++) {
+                // Create a temporary rule set with adjusted colIndex
+                const adjustedRules = extractionRules.map(rule => ({
+                    ...rule,
+                    colIndex: rule.colIndex + offset
+                }));
+
+                const tempResult = extractData(rows, adjustedRules);
+
+                // Check if we found ANY non-zero data
+                const hasData = Object.values(tempResult).some(val => val !== 0);
+
+                if (hasData) {
+                    extractedData = tempResult;
+                    isFound = true;
+                    if (isDebug) logger.debug(`[Debug] Found data with offset +${offset} (colIndex adjusted).`);
+                    break; // Stop trying other columns
+                } 
+                
+                // CRITICAL FIX: Always keep the result from the first attempt (offset === 0) 
+                // as the default fallback, even if it's all zeros.
+                if (offset === 0) {
+                     extractedData = tempResult;
                 }
             }
+
+            if (!isFound) {
+                if (isDebug) logger.debug('[Debug] No non-zero data found in colIndex, +1, or +2.');
+            }
+
+
 
             // Merge with default result structure
             const result = {
