@@ -16,11 +16,12 @@ IS_DEBUG = "false"
 
 # Extraction Configuration (JSON String)
 # Define rules: key (output field name), keywords (list of words to match in first column), colIndex (0-based column index to take value from)
+# Optional: logic ("AND" | "OR", default "AND")
 EXTRACTION_CONFIG = '''
 {
   "default": [ 
-    {"key": "first_total", "keywords": ["项目","定金"], "colIndex": 4},
-    {"key": "second_total", "keywords": ["项目","余款"], "colIndex": 4},
+    {"key": "first_total", "keywords": ["定金"], "colIndex": 4},
+    {"key": "second_total", "keywords": ["余款"], "colIndex": 4},
     {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 4},
     {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 4},
     {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 4},
@@ -28,16 +29,21 @@ EXTRACTION_CONFIG = '''
     {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 4}
   ],
   "preventivo_sw_es": [ 
-    {"key": "first_total", "keywords": ["项目","定金"], "colIndex": 4},
-    {"key": "second_total", "keywords": ["项目","余款"], "colIndex": 4},
+    {"key": "first_total", "keywords": ["定金"], "colIndex": 4},
+    {"key": "second_total", "keywords": ["余款"], "colIndex": 4},
     {"key": "hardware_total", "keywords": ["hardware", "小计"], "colIndex": 4},
     {"key": "software_total", "keywords": ["software", "小计"], "colIndex": 4},
     {"key": "service_total", "keywords": ["service", "小计"], "colIndex": 4},
     {"key": "discount", "keywords": ["连锁品牌", "老客户"], "colIndex": 4},
-    {"key": "grand_total", "keywords": ["总合计", "iva inclusa"], "colIndex": 4}
+    {"key": "grand_total", "keywords": ["总合计","项目款"], "colIndex": 4,"logic": "OR"}
   ],
   "example_type": [
     {"key": "example_key", "keywords": ["example"], "colIndex": 1}
   ]
 }
 '''
+
+# 单个关键字示例 (Single Keyword Example):
+# {"key": "deposit", "keywords": ["定金"], "colIndex": 4},
+# OR 逻辑示例 (OR Logic Example): 匹配 "定金" 或 "预付款" (Match "定金" OR "预付款")
+# {"key": "deposit_or", "keywords": ["定金", "预付款"], "logic": "OR", "colIndex": 4},

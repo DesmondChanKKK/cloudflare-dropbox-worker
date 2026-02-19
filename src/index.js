@@ -6,6 +6,7 @@ const DEFAULT_IS_DEBUG = true; // Default to true as requested, can be overridde
 function createResponse(data, status = 200) {
     const body = {
         version: VERSION,
+        status_code: status,
         ...(typeof data === 'string' ? { message: data } : data)
     };
     return new Response(JSON.stringify(body), {
@@ -204,8 +205,13 @@ export default {
 
                         // 2. Fuzzy match (ignore version suffix like (1), (2), etc.)
                         if (!match) {
-                            // Helper to remove (1), (2) etc. from filename
-                            const cleanFilename = (name) => name.replace(/\s*\(\d+\)/g, '').toLowerCase();
+                            // Helper to remove (1), (2) etc. and timestamps from filename
+                            const cleanFilename = (name) => {
+                                return name
+                                    .replace(/\s*\(\d+\)/g, '')       // Remove (1), (2)
+                                    .replace(/-\d{14}/g, '')          // Remove timestamp -YYYYMMDDHHMMSS
+                                    .toLowerCase();
+                            };
                             const cleanSearchName = cleanFilename(searchFilename);
 
                             match = data.entries.find(entry => 
@@ -391,22 +397,35 @@ export default {
                 const extracted = {};
                 // Initialize keys with 0
                 rules.forEach(rule => extracted[rule.key] = 0);
+                
+                // Track which keys have been found to ensure we keep the bottom-most match (first found in reverse)
+                const foundKeys = new Set();
 
-                for (let i = 0; i < rows.length; i++) {
+                for (let i = rows.length - 1; i >= 0; i--) {
                     const row = rows[i];
                     const cellA = row[0] ? row[0].toString().toLowerCase() : '';
                     const cellB = row[1] ? row[1].toString().toLowerCase() : '';
                     const textToCheck = cellA + ' ' + cellB;
 
                     for (const rule of rules) {
-                        const match = rule.keywords.every(keyword => textToCheck.includes(keyword.toLowerCase()));
+                        // Skip if we already found a value for this key (Bottom-most wins)
+                        if (foundKeys.has(rule.key)) continue;
+
+                        const logic = (rule.logic || 'AND').toUpperCase();
+                        let match = false;
+
+                        if (logic === 'OR') {
+                            match = rule.keywords.some(keyword => textToCheck.includes(keyword.toLowerCase()));
+                        } else {
+                            // Default to AND
+                            match = rule.keywords.every(keyword => textToCheck.includes(keyword.toLowerCase()));
+                        }
+
                         if (match) {
                             const val = row[rule.colIndex];
                             const parsedVal = parseCurrency(val);
-                            // Only update if we found a non-zero value or if it's the first time?
-                            // Logic implies last match wins, or we just take the first one?
-                            // Original logic: result[rule.key] = parsedVal; (Last match wins if multiple rows match)
                             extracted[rule.key] = parsedVal;
+                            foundKeys.add(rule.key);
                         }
                     }
                 }
